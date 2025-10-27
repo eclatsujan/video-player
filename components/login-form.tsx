@@ -4,13 +4,14 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { login } from "@/lib/auth-actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { TriangleIcon as ExclamationTriangleIcon } from "lucide-react"
+import { signIn,  } from "@/src/auth"
+// import { auth } from "@/src/db/auth"
 
 export default function LoginForm() {
   const router = useRouter()
@@ -25,17 +26,19 @@ export default function LoginForm() {
     setError(null)
 
     try {
-      const result = await login(email, password)
-
-      if (result.success) {
-        router.push("/video-player")
-        router.refresh()
-      } else {
-        setError(result.error || "Login failed. Please try again.")
+      const { data, error } = await signIn.email({
+        email,
+        password,
+      });
+      if(error){
+        setError(error.message || "Invalid email or password")
       }
+      if(data && !error){
+        router.refresh()
+      }
+      
     } catch (err) {
       setError("An unexpected error occurred. Please try again.")
-      console.error(err)
     } finally {
       setIsLoading(false)
     }

@@ -1,19 +1,36 @@
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getSessionCookie } from "better-auth/cookies";
 
-export async function middleware(req:NextRequest){
-    const { pathname, origin } = req.nextUrl;
-    // Check if user is already logged in
-    const isLoggedIn = (await cookies()).has("auth_token")
-    if(pathname === "/" && isLoggedIn){
-        return NextResponse.redirect("/dashboard");
-    }
-    return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  const sessionCookie = getSessionCookie(request);
+
+  
+
+  const protectedPaths = ["/dashboard", "/profile"];
+  const isProtectedPath = protectedPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+
+  if (isProtectedPath && !sessionCookie) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const authPaths = ["/login", "/register"];
+  const isAuthPath = authPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+const homePage = request.nextUrl.pathname === "/";
+  if ((isAuthPath ||  homePage) && sessionCookie) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    // run middleware on all paths except static files, api routes, favicon
-    "/((?!_next/static|_next/image|favicon.ico|api/auth/callback).*)",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
